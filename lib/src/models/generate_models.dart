@@ -1,3 +1,5 @@
+import 'logprob_models.dart';
+
 /// Request payload for the text generation endpoint.
 class GenerateRequest {
   /// Creates a generation request.
@@ -79,6 +81,7 @@ class GenerateResponse {
     required this.createdAt,
     required this.response,
     required this.done,
+    this.thinking,
     this.doneReason,
     this.context,
     this.totalDuration,
@@ -87,6 +90,7 @@ class GenerateResponse {
     this.promptEvalDuration,
     this.evalCount,
     this.evalDuration,
+    this.logprobs,
   });
 
   /// Model that generated the response.
@@ -97,6 +101,9 @@ class GenerateResponse {
 
   /// Generated response text.
   final String response;
+
+  /// Optional chain-of-thought reasoning text produced by thinking models.
+  final String? thinking;
 
   /// Whether generation is fully completed.
   final bool done;
@@ -125,12 +132,16 @@ class GenerateResponse {
   /// Generation evaluation time in nanoseconds.
   final int? evalDuration;
 
+  /// Optional per-token log-probability information.
+  final List<LogprobItem>? logprobs;
+
   /// Creates a response from API JSON payload.
   factory GenerateResponse.fromJson(Map<String, dynamic> json) {
     return GenerateResponse(
       model: (json['model'] ?? '') as String,
       createdAt: (json['created_at'] ?? '') as String,
       response: (json['response'] ?? '') as String,
+      thinking: json['thinking'] as String?,
       done: (json['done'] ?? false) as bool,
       doneReason: json['done_reason'] as String?,
       context: (json['context'] as List<dynamic>?)?.cast<int>(),
@@ -140,6 +151,10 @@ class GenerateResponse {
       promptEvalDuration: (json['prompt_eval_duration'] as num?)?.toInt(),
       evalCount: (json['eval_count'] as num?)?.toInt(),
       evalDuration: (json['eval_duration'] as num?)?.toInt(),
+      logprobs: (json['logprobs'] as List<dynamic>?)
+          ?.whereType<Map<String, dynamic>>()
+          .map(LogprobItem.fromJson)
+          .toList(),
     );
   }
 }
@@ -152,6 +167,7 @@ class GenerateChunk {
     required this.createdAt,
     required this.response,
     required this.done,
+    this.thinking,
     this.doneReason,
     this.context,
     this.totalDuration,
@@ -160,6 +176,7 @@ class GenerateChunk {
     this.promptEvalDuration,
     this.evalCount,
     this.evalDuration,
+    this.logprobs,
   });
 
   /// Model that generated this chunk.
@@ -171,6 +188,9 @@ class GenerateChunk {
   /// Partial generated text in this chunk.
   final String response;
 
+  /// Optional chain-of-thought reasoning text in this chunk.
+  final String? thinking;
+
   /// Whether this is the terminal chunk.
   final bool done;
 
@@ -180,23 +200,26 @@ class GenerateChunk {
   /// Optional context token state included in final chunk.
   final List<int>? context;
 
-  /// End-to-end request time in nanoseconds.
+  /// End-to-end request time in nanoseconds (present on terminal chunk).
   final int? totalDuration;
 
-  /// Time spent loading model state in nanoseconds.
+  /// Time spent loading model state in nanoseconds (present on terminal chunk).
   final int? loadDuration;
 
-  /// Number of prompt tokens evaluated.
+  /// Number of prompt tokens evaluated (present on terminal chunk).
   final int? promptEvalCount;
 
-  /// Prompt evaluation time in nanoseconds.
+  /// Prompt evaluation time in nanoseconds (present on terminal chunk).
   final int? promptEvalDuration;
 
-  /// Number of generated tokens evaluated.
+  /// Number of generated tokens evaluated (present on terminal chunk).
   final int? evalCount;
 
-  /// Generation evaluation time in nanoseconds.
+  /// Generation evaluation time in nanoseconds (present on terminal chunk).
   final int? evalDuration;
+
+  /// Optional per-token log-probability information.
+  final List<LogprobItem>? logprobs;
 
   /// Creates a chunk from API JSON payload.
   factory GenerateChunk.fromJson(Map<String, dynamic> json) {
@@ -204,6 +227,7 @@ class GenerateChunk {
       model: (json['model'] ?? '') as String,
       createdAt: (json['created_at'] ?? '') as String,
       response: (json['response'] ?? '') as String,
+      thinking: json['thinking'] as String?,
       done: (json['done'] ?? false) as bool,
       doneReason: json['done_reason'] as String?,
       context: (json['context'] as List<dynamic>?)?.cast<int>(),
@@ -213,6 +237,10 @@ class GenerateChunk {
       promptEvalDuration: (json['prompt_eval_duration'] as num?)?.toInt(),
       evalCount: (json['eval_count'] as num?)?.toInt(),
       evalDuration: (json['eval_duration'] as num?)?.toInt(),
+      logprobs: (json['logprobs'] as List<dynamic>?)
+          ?.whereType<Map<String, dynamic>>()
+          .map(LogprobItem.fromJson)
+          .toList(),
     );
   }
 }

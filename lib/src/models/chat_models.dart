@@ -1,4 +1,51 @@
 import '../errors/ollama_exception.dart';
+import 'logprob_models.dart';
+
+/// The function specification inside a tool call.
+class ToolCallFunction {
+  /// Creates a tool call function.
+  const ToolCallFunction({
+    required this.name,
+    this.description,
+    this.arguments,
+  });
+
+  /// Name of the function to call.
+  final String name;
+
+  /// Optional human-readable description of the function.
+  final String? description;
+
+  /// Optional map of argument names to values.
+  final Map<String, dynamic>? arguments;
+
+  /// Creates a tool call function from API JSON payload.
+  factory ToolCallFunction.fromJson(Map<String, dynamic> json) {
+    return ToolCallFunction(
+      name: (json['name'] ?? '') as String,
+      description: json['description'] as String?,
+      arguments: json['arguments'] as Map<String, dynamic>?,
+    );
+  }
+}
+
+/// A tool call requested by the model.
+class ToolCall {
+  /// Creates a tool call.
+  const ToolCall({required this.function});
+
+  /// The function details for this tool call.
+  final ToolCallFunction function;
+
+  /// Creates a tool call from API JSON payload.
+  factory ToolCall.fromJson(Map<String, dynamic> json) {
+    return ToolCall(
+      function: ToolCallFunction.fromJson(
+        (json['function'] as Map<String, dynamic>?) ?? const {},
+      ),
+    );
+  }
+}
 
 /// A single chat message exchanged in a conversation.
 class ChatMessage {
@@ -6,6 +53,8 @@ class ChatMessage {
   const ChatMessage({
     required this.role,
     required this.content,
+    this.thinking,
+    this.toolCalls,
     this.images,
   });
 
@@ -15,6 +64,12 @@ class ChatMessage {
   /// Message content in plain text.
   final String content;
 
+  /// Optional chain-of-thought reasoning text produced by thinking models.
+  final String? thinking;
+
+  /// Optional tool calls requested by the assistant.
+  final List<ToolCall>? toolCalls;
+
   /// Optional base64-encoded images for multimodal prompts.
   final List<String>? images;
 
@@ -23,6 +78,17 @@ class ChatMessage {
     return {
       'role': role,
       'content': content,
+      if (thinking != null) 'thinking': thinking,
+      if (toolCalls != null)
+        'tool_calls': toolCalls!.map((tc) => {
+              'function': {
+                'name': tc.function.name,
+                if (tc.function.description != null)
+                  'description': tc.function.description,
+                if (tc.function.arguments != null)
+                  'arguments': tc.function.arguments,
+              },
+            }).toList(),
       if (images != null) 'images': images,
     };
   }
@@ -32,6 +98,11 @@ class ChatMessage {
     return ChatMessage(
       role: (json['role'] ?? '') as String,
       content: (json['content'] ?? '') as String,
+      thinking: json['thinking'] as String?,
+      toolCalls: (json['tool_calls'] as List<dynamic>?)
+          ?.whereType<Map<String, dynamic>>()
+          .map(ToolCall.fromJson)
+          .toList(),
       images: (json['images'] as List<dynamic>?)?.cast<String>(),
     );
   }
@@ -95,6 +166,7 @@ class ChatResponse {
     this.promptEvalDuration,
     this.evalCount,
     this.evalDuration,
+    this.logprobs,
   });
 
   /// Model that generated the response.
@@ -130,6 +202,9 @@ class ChatResponse {
   /// Generation evaluation time in nanoseconds.
   final int? evalDuration;
 
+  /// Optional per-token log-probability information.
+  final List<LogprobItem>? logprobs;
+
   /// Creates a response from API JSON payload.
   factory ChatResponse.fromJson(Map<String, dynamic> json) {
     return ChatResponse(
@@ -144,6 +219,10 @@ class ChatResponse {
       promptEvalDuration: (json['prompt_eval_duration'] as num?)?.toInt(),
       evalCount: (json['eval_count'] as num?)?.toInt(),
       evalDuration: (json['eval_duration'] as num?)?.toInt(),
+      logprobs: (json['logprobs'] as List<dynamic>?)
+          ?.whereType<Map<String, dynamic>>()
+          .map(LogprobItem.fromJson)
+          .toList(),
     );
   }
 }
@@ -157,6 +236,13 @@ class ChatChunk {
     required this.message,
     required this.done,
     this.doneReason,
+    this.totalDuration,
+    this.loadDuration,
+    this.promptEvalCount,
+    this.promptEvalDuration,
+    this.evalCount,
+    this.evalDuration,
+    this.logprobs,
   });
 
   /// Model that generated this chunk.
@@ -174,6 +260,27 @@ class ChatChunk {
   /// Optional completion reason for the terminal chunk.
   final String? doneReason;
 
+  /// End-to-end request time in nanoseconds (present on terminal chunk).
+  final int? totalDuration;
+
+  /// Time spent loading model state in nanoseconds (present on terminal chunk).
+  final int? loadDuration;
+
+  /// Number of prompt tokens evaluated (present on terminal chunk).
+  final int? promptEvalCount;
+
+  /// Prompt evaluation time in nanoseconds (present on terminal chunk).
+  final int? promptEvalDuration;
+
+  /// Number of generated tokens evaluated (present on terminal chunk).
+  final int? evalCount;
+
+  /// Generation evaluation time in nanoseconds (present on terminal chunk).
+  final int? evalDuration;
+
+  /// Optional per-token log-probability information.
+  final List<LogprobItem>? logprobs;
+
   /// Creates a chunk from API JSON payload.
   factory ChatChunk.fromJson(Map<String, dynamic> json) {
     return ChatChunk(
@@ -182,6 +289,16 @@ class ChatChunk {
       message: ChatMessage.fromJson(_requireMessageMap(json)),
       done: (json['done'] ?? false) as bool,
       doneReason: json['done_reason'] as String?,
+      totalDuration: (json['total_duration'] as num?)?.toInt(),
+      loadDuration: (json['load_duration'] as num?)?.toInt(),
+      promptEvalCount: (json['prompt_eval_count'] as num?)?.toInt(),
+      promptEvalDuration: (json['prompt_eval_duration'] as num?)?.toInt(),
+      evalCount: (json['eval_count'] as num?)?.toInt(),
+      evalDuration: (json['eval_duration'] as num?)?.toInt(),
+      logprobs: (json['logprobs'] as List<dynamic>?)
+          ?.whereType<Map<String, dynamic>>()
+          .map(LogprobItem.fromJson)
+          .toList(),
     );
   }
 }

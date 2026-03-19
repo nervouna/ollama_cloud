@@ -18,6 +18,9 @@ export 'src/errors/ollama_exception.dart';
 /// Chat request/response and streaming chunk models.
 export 'src/models/chat_models.dart';
 
+/// Logprob models shared by chat and generate responses.
+export 'src/models/logprob_models.dart';
+
 /// Embeddings request/response models.
 export 'src/models/embeddings_models.dart';
 

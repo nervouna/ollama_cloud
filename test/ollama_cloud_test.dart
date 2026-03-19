@@ -355,4 +355,135 @@ void main() {
       throwsA(isA<OllamaUnauthorizedException>()),
     );
   });
+
+  test('chat response parses thinking in message', () async {
+    final dio = Dio(BaseOptions(baseUrl: 'https://api.example.com'));
+    final adapter = DioAdapter(dio: dio);
+    dio.httpClientAdapter = adapter;
+
+    adapter.onPost(
+      '/api/chat',
+      (server) => server.reply(200, {
+        'model': 'qwen2.5:7b',
+        'created_at': '2026-03-20T00:00:00Z',
+        'message': {
+          'role': 'assistant',
+          'content': 'the answer is 42',
+          'thinking': 'let me calculate...',
+        },
+        'done': true,
+        'done_reason': 'stop',
+      }),
+      data: {
+        'model': 'qwen2.5:7b',
+        'messages': [
+          {'role': 'user', 'content': 'hi'},
+        ],
+        'stream': false,
+      },
+    );
+
+    final client = OllamaCloudClient.withDio(dio);
+    final response = await client.chat(
+      const ChatRequest(
+        model: 'qwen2.5:7b',
+        messages: [ChatMessage(role: 'user', content: 'hi')],
+      ),
+    );
+
+    expect(response.message.content, 'the answer is 42');
+    expect(response.message.thinking, 'let me calculate...');
+    expect(response.doneReason, 'stop');
+  });
+
+  test('chat response parses logprobs', () async {
+    final dio = Dio(BaseOptions(baseUrl: 'https://api.example.com'));
+    final adapter = DioAdapter(dio: dio);
+    dio.httpClientAdapter = adapter;
+
+    adapter.onPost(
+      '/api/chat',
+      (server) => server.reply(200, {
+        'model': 'qwen2.5:7b',
+        'created_at': '2026-03-20T00:00:00Z',
+        'message': {'role': 'assistant', 'content': 'hi'},
+        'done': true,
+        'logprobs': [
+          {
+            'token': 'hi',
+            'logprob': -0.4,
+            'bytes': [104, 105],
+            'top_logprobs': [
+              {'token': 'hello', 'logprob': -1.1, 'bytes': [104]},
+            ],
+          },
+        ],
+      }),
+      data: {
+        'model': 'qwen2.5:7b',
+        'messages': [
+          {'role': 'user', 'content': 'hi'},
+        ],
+        'stream': false,
+      },
+    );
+
+    final client = OllamaCloudClient.withDio(dio);
+    final response = await client.chat(
+      const ChatRequest(
+        model: 'qwen2.5:7b',
+        messages: [ChatMessage(role: 'user', content: 'hi')],
+      ),
+    );
+
+    expect(response.logprobs, isNotNull);
+    expect(response.logprobs!, hasLength(1));
+    expect(response.logprobs![0].token, 'hi');
+    expect(response.logprobs![0].logprob, -0.4);
+    expect(response.logprobs![0].topLogprobs, hasLength(1));
+    expect(response.logprobs![0].topLogprobs![0].token, 'hello');
+  });
+
+  test('generate response parses thinking and logprobs', () async {
+    final dio = Dio(BaseOptions(baseUrl: 'https://api.example.com'));
+    final adapter = DioAdapter(dio: dio);
+    dio.httpClientAdapter = adapter;
+
+    adapter.onPost(
+      '/api/generate',
+      (server) => server.reply(200, {
+        'model': 'qwen2.5:7b',
+        'created_at': '2026-03-20T00:00:00Z',
+        'response': 'the answer',
+        'thinking': 'step by step: ...',
+        'done': true,
+        'logprobs': [
+          {
+            'token': 'the',
+            'logprob': -0.2,
+            'top_logprobs': [
+              {'token': 'a', 'logprob': -1.5},
+            ],
+          },
+        ],
+      }),
+      data: {
+        'model': 'qwen2.5:7b',
+        'prompt': 'hi',
+        'stream': false,
+      },
+    );
+
+    final client = OllamaCloudClient.withDio(dio);
+    final response = await client.generate(
+      const GenerateRequest(model: 'qwen2.5:7b', prompt: 'hi'),
+    );
+
+    expect(response.response, 'the answer');
+    expect(response.thinking, 'step by step: ...');
+    expect(response.logprobs, isNotNull);
+    expect(response.logprobs!, hasLength(1));
+    expect(response.logprobs![0].token, 'the');
+    expect(response.logprobs![0].logprob, -0.2);
+  });
 }
