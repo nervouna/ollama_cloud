@@ -1,6 +1,6 @@
 name: ollama_cloud
 description: "A Flutter SDK for Ollama cloud APIs with stream and non-stream support."
-version: 0.0.1
+version: 0.0.2
 homepage: https://github.com/nervouna/ollama_cloud
 repository: https://github.com/nervouna/ollama_cloud
 issue_tracker: https://github.com/nervouna/ollama_cloud/issues

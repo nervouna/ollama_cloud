@@ -11,6 +11,9 @@ error mapping, and both stream/non-stream support.
 - model management APIs (`tags`, `ps`, `show`, `pull`, `push`, `delete`)
 - unified Bearer token authentication
 - typed exceptions for network/timeout/server/unauthorized errors
+- `thinking` field for chain-of-thought reasoning (models that support it)
+- `tool_calls` field with typed `ToolCall` / `ToolCallFunction` models
+- `logprobs` field with typed `LogprobItem` / `TopLogprob` models
 
 ## Getting Started
 
@@ -18,7 +21,7 @@ Add dependency:
 
 ```yaml
 dependencies:
-	ollama_cloud: ^0.0.1
+	ollama_cloud: ^0.0.2
 ```
 
 Create a client:
@@ -78,6 +81,28 @@ final chat = await client.chat(
 );
 
 print(chat.message.content);
+
+// For thinking models, the reasoning process is available separately:
+if (chat.message.thinking != null) {
+	print('Thinking: ${chat.message.thinking}');
+}
+```
+
+### 3b) Chat (stream) with thinking
+
+```dart
+await for (final chunk in client.chatStream(
+	const ChatRequest(
+		model: 'qwen2.5:7b',
+		messages: [ChatMessage(role: 'user', content: 'Solve step by step: 2+2')],
+	),
+)) {
+	if (chunk.message.thinking?.isNotEmpty ?? false) {
+		stdout.write('[thinking] ${chunk.message.thinking}');
+	} else if (chunk.message.content.isNotEmpty) {
+		stdout.write(chunk.message.content);
+	}
+}
 ```
 
 ### 4) Embeddings

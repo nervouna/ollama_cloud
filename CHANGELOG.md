@@ -1,3 +1,11 @@
+## 0.0.2
+
+- Added `thinking` field to `ChatMessage`, `GenerateResponse`, and `GenerateChunk` for chain-of-thought reasoning support.
+- Added `tool_calls` field to `ChatMessage` with typed `ToolCall` and `ToolCallFunction` models.
+- Added `logprobs` field to `ChatResponse`, `ChatChunk`, `GenerateResponse`, and `GenerateChunk` with typed `LogprobItem` and `TopLogprob` models.
+- Completed `ChatChunk` with full statistics fields (`total_duration`, `load_duration`, `prompt_eval_count`, `prompt_eval_duration`, `eval_count`, `eval_duration`).
+- Exported `LogprobItem` and `TopLogprob` as part of the public API.
+
 ## 0.0.1
 
 - Initial release of ollama_cloud Flutter SDK.
